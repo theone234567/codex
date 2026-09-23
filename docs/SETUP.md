@@ -25,7 +25,7 @@ Allow about 30 minutes. You need free accounts with **Supabase**, **Anthropic** 
 
 ## 2. Anthropic (the AI)
 
-1. Go to <https://console.anthropic.com>, create an API key, and under **Limits** set a monthly spend limit (for example US$10).
+1. Sign up at <https://console.anthropic.com>. This is separate from a Claude.ai subscription: the API is pay-as-you-go, so add a small amount of credit (e.g. US$5, which covers roughly 1,000+ items on the default model). Then create an API key and, under **Limits**, set a monthly spend limit (for example US$10).
    For price checks, make sure **web search** is enabled for your organisation in the Console settings.
 2. Store the key as a Supabase secret and deploy the AI function:
    ```bash
@@ -34,9 +34,9 @@ Allow about 30 minutes. You need free accounts with **Supabase**, **Anthropic** 
      ALLOWED_ORIGINS=https://klicklist.pages.dev \
      ALLOWED_USERS=you@example.com,+64211234567 \
      AI_DAILY_LIMIT=150
-   # optional, about 5x cheaper per item:
-   # supabase secrets set AI_MODEL=claude-haiku-4-5
-   # price checks use claude-haiku-4-5 by default; override with PRICE_MODEL=...
+   # Both listing writing and price checks use claude-haiku-4-5 (cheapest) by default.
+   # optional upgrade for better writing/pricing (about 5x the cost):
+   # supabase secrets set AI_MODEL=claude-opus-5
    supabase functions deploy analyze-item
    supabase functions deploy price-check
    ```

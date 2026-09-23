@@ -17,9 +17,9 @@ Running costs are free except the AI, which you pay Anthropic for by usage (USD,
 
 | What | Per item | 50 items |
 |---|---|---|
-| Listing writing, Claude Haiku 4.5 (`AI_MODEL=claude-haiku-4-5`, cheapest) | ~0.4c | ~$0.20 |
+| Listing writing, Claude Haiku 4.5 (**default**, cheapest) | ~0.4c | ~$0.20 |
 | Listing writing, Claude Sonnet 5 (`AI_MODEL=claude-sonnet-5`) | ~0.8c | ~$0.40 |
-| Listing writing, Claude Opus 5 (default, best writing and pricing) | ~2c | ~$1.00 |
+| Listing writing, Claude Opus 5 (`AI_MODEL=claude-opus-5`, best writing and pricing) | ~2c | ~$1.00 |
 | Online price check (Haiku 4.5, 1 web search) | ~1.5–2c | only items ≥ $15, so typically ~$0.20 |
 | White backgrounds, photo tidy, barcodes | free (on your device) | free |
 | Website, database, photo storage, email sign-in codes | free tiers | free |

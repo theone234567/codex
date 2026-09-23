@@ -13,7 +13,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { AnalyzeRequest, buildUserText, LISTING_JSON_SCHEMA, sanitizeListing, SYSTEM_PROMPT } from "../_shared/listing.ts";
 import { authenticate, DAILY_LIMIT, json, readBody, recordUsage, takeQuota } from "../_shared/server.ts";
 
-const MODEL = Deno.env.get("AI_MODEL") ?? "claude-opus-5";
+const MODEL = Deno.env.get("AI_MODEL") ?? "claude-haiku-4-5"; // cheapest; set AI_MODEL to upgrade
 const MAX_BODY_BYTES = 1_300_000;
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY"), timeout: 60_000, maxRetries: 1 });
