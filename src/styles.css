@@ -112,3 +112,26 @@ progress { width: 100%; accent-color: var(--brand); }
 
 .modal { position: fixed; inset: 0; background: rgb(0 0 0 / 0.5); display: grid; place-items: center; padding: 16px; z-index: 20; }
 .modal .card { width: 100%; max-width: 380px; }
+
+/* white-background photos: show the whole item on white */
+.thumb.white { background: #fff; }
+.thumb.white img { object-fit: contain; }
+.price-box { background: var(--bg); }
+
+.controls .next { font-size: 1.05rem; padding: 16px 12px; }
+.toast { position: fixed; left: 50%; top: 70px; transform: translateX(-50%); z-index: 30; background: var(--brand); color: #fff;
+  padding: 10px 16px; border-radius: 99px; font-weight: 700; box-shadow: 0 6px 20px rgb(0 0 0 / 0.2); }
+.capture.dragging { outline: 3px dashed var(--brand); outline-offset: -6px; border-radius: var(--radius); }
+
+/* desktop: photos on the left, form on the right */
+.editor-photos, .editor-form { display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 900px) {
+  .page { max-width: 1200px; }
+  .editor { display: grid; grid-template-columns: minmax(300px, 420px) 1fr; align-items: start; gap: 20px; }
+  .editor-photos { position: sticky; top: 70px; }
+  .editor-photos .photos { flex-wrap: wrap; overflow: visible; }
+  .editor-photos .photos figure { flex: 0 0 calc(50% - 4px); }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  .capture { max-width: 900px; }
+  .viewfinder { aspect-ratio: 4 / 3; }
+}

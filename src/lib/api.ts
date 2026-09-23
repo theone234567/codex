@@ -1,7 +1,7 @@
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import { aiImageBase64, readBarcode, type Processed } from "./image";
-import type { Batch, Item, Photo } from "./types";
+import { aiImageBase64, readBarcode, renderFinal, type Processed } from "./image";
+import { DEFAULT_PREFS, type Batch, type Item, type Photo, type PriceCheck, type Settings } from "./types";
 
 const BUCKET = "photos";
 export const AI_PHOTOS_PER_ITEM = 2; // front + back is usually enough; each extra photo ~600 tokens
@@ -17,6 +17,9 @@ function ok(res: { error: { message: string } | null }): void {
 }
 
 export const thumbPath = (p: string) => p.replace(/\.jpg$/, "_t.jpg");
+export const whitePath = (p: string) => p.replace(/\.jpg$/, "_w.jpg");
+export const whiteThumbPath = (p: string) => p.replace(/\.jpg$/, "_wt.jpg");
+export const showsWhite = (p: Photo) => p.use_white && p.bg_status === "done";
 
 // ---------- batches ----------
 export async function listBatches(): Promise<(Batch & { items: { count: number }[] })[]> {
@@ -28,8 +31,9 @@ export async function createBatch(name: string): Promise<Batch> {
 }
 
 export async function deleteBatch(id: string): Promise<void> {
-  const photos = check(await supabase.from("photos").select("storage_path, items!inner(batch_id)").eq("items.batch_id", id));
+  const photos = check(await supabase.from("photos").select("storage_path, item_id, items!inner(batch_id)").eq("items.batch_id", id));
   await removeFiles(photos.map((p) => p.storage_path));
+  await removeExports(photos.map((p) => ({ uid: p.storage_path.split("/")[0], itemId: p.item_id })));
   ok(await supabase.from("batches").delete().eq("id", id));
 }
 
@@ -50,14 +54,26 @@ export async function createItem(batchId: string, position: number): Promise<Ite
   return { ...(row as Item), photos: [] };
 }
 
-type EditableItem = Partial<Omit<Item, "id" | "batch_id" | "photos" | "ai_status" | "ai_error" | "ai_updated_at">>;
+type EditableItem = Partial<Omit<Item, "id" | "batch_id" | "photos" | "ai_status" | "ai_error" | "ai_updated_at" | "price_check" | "price_checked_at">>;
 export async function updateItem(id: string, patch: EditableItem & { ai_status?: "pending" | "skipped" }): Promise<void> {
   ok(await supabase.from("items").update(patch).eq("id", id));
 }
 
 export async function deleteItem(item: Item): Promise<void> {
   await removeFiles(item.photos.map((p) => p.storage_path));
+  if (item.photos[0]) await removeExports([{ uid: item.photos[0].storage_path.split("/")[0], itemId: item.id }]);
   ok(await supabase.from("items").delete().eq("id", item.id));
+}
+
+async function removeExports(list: { uid: string; itemId: string }[]): Promise<void> {
+  const seen = new Set<string>();
+  const paths: string[] = [];
+  for (const { uid, itemId } of list) {
+    if (seen.has(itemId)) continue;
+    seen.add(itemId);
+    for (let n = 1; n <= 20; n++) paths.push(`${uid}/export/${itemId}/${n}.jpg`);
+  }
+  for (let i = 0; i < paths.length; i += 100) await supabase.storage.from(BUCKET).remove(paths.slice(i, i + 100));
 }
 
 /** Move all photos of `item` onto `target` (fixes grouping mistakes), then delete `item`. */
@@ -85,7 +101,7 @@ export async function addPhoto(userId: string, item: Item, processed: Processed,
   }).select().single()) as Photo;
 }
 
-export async function updatePhoto(id: string, patch: Partial<Pick<Photo, "rotation" | "crop" | "position">>): Promise<void> {
+export async function updatePhoto(id: string, patch: Partial<Pick<Photo, "rotation" | "crop" | "position" | "use_white">>): Promise<void> {
   ok(await supabase.from("photos").update(patch).eq("id", id));
 }
 
@@ -95,7 +111,7 @@ export async function deletePhoto(photo: Photo): Promise<void> {
 }
 
 async function removeFiles(paths: string[]): Promise<void> {
-  const all = paths.flatMap((p) => [p, thumbPath(p)]);
+  const all = paths.flatMap((p) => [p, thumbPath(p), whitePath(p), whiteThumbPath(p)]);
   for (let i = 0; i < all.length; i += 100) {
     await supabase.storage.from(BUCKET).remove(all.slice(i, i + 100));
   }
@@ -173,4 +189,89 @@ async function retry<T>(fn: () => Promise<T>, tries = 3): Promise<T> {
       await new Promise((r) => setTimeout(r, 1000 * 2 ** i));
     }
   }
+}
+
+/** The photo to use for Trade Me: the white-background version when there is one and it's switched on. */
+export async function renderPhoto(p: Photo): Promise<Blob> {
+  const white = showsWhite(p);
+  const src = await downloadPhoto(white ? whitePath(p.storage_path) : p.storage_path);
+  return renderFinal(src, p.rotation, white ? null : p.crop); // white versions are already cropped
+}
+
+// ---------- white backgrounds (runs on this device) ----------
+export async function makeWhite(p: Photo): Promise<boolean> {
+  const original = await downloadPhoto(p.storage_path);
+  const { whiteBackground } = await import("./bgremove"); // loaded only when needed (keeps the app fast to open)
+  const result = await whiteBackground(original);
+  if (!result) {
+    ok(await supabase.from("photos").update({ bg_status: "failed" }).eq("id", p.id));
+    return false;
+  }
+  const opts = { contentType: "image/jpeg", upsert: true, cacheControl: "60" };
+  await retry(async () => check(await supabase.storage.from(BUCKET).upload(whitePath(p.storage_path), result.main, opts)));
+  await retry(async () => check(await supabase.storage.from(BUCKET).upload(whiteThumbPath(p.storage_path), result.thumb, opts)));
+  blobCache.set(whitePath(p.storage_path), result.main);
+  urlCache.delete(whiteThumbPath(p.storage_path));
+  urlCache.delete(whitePath(p.storage_path));
+  ok(await supabase.from("photos").update({ bg_status: "done" }).eq("id", p.id));
+  return true;
+}
+
+// ---------- online price check ----------
+export async function priceCheck(item: Item): Promise<{ applied: boolean; check: PriceCheck }> {
+  const { data, error } = await supabase.functions.invoke("price-check", { body: { itemId: item.id } });
+  if (error) {
+    let msg = "Price check failed";
+    if (error instanceof FunctionsHttpError) {
+      try { msg = (await error.context.json()).error ?? msg; } catch { /* keep default */ }
+    }
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// ---------- settings (shared between phone and desktop) ----------
+export async function getSettings(): Promise<Settings> {
+  const { data } = await supabase.from("settings").select("prefs,tm_template,category_map").maybeSingle();
+  return {
+    prefs: { ...DEFAULT_PREFS, ...(data?.prefs ?? {}) },
+    tm_template: data?.tm_template ?? null,
+    category_map: data?.category_map ?? {},
+  };
+}
+
+export async function saveSettings(patch: Partial<Settings>): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+  ok(await supabase.from("settings").upsert({ user_id: user.id, ...patch, updated_at: new Date().toISOString() }));
+}
+
+/** Remember "AI category path -> Trade Me category code" so the next similar item gets it automatically. */
+export async function rememberCategory(path: string, code: string): Promise<void> {
+  if (!path || !code) return;
+  const s = await getSettings();
+  if (s.category_map[path] === code) return;
+  const map = { ...s.category_map, [path]: code };
+  const keys = Object.keys(map);
+  if (keys.length > 500) delete map[keys[0]];
+  await saveSettings({ category_map: map });
+}
+
+// ---------- Trade Me export ----------
+/** Render final photos (crop/rotate/white) and upload them so Trade Me can fetch them by link. */
+export async function exportPhotoLinks(userId: string, item: Item): Promise<string[]> {
+  const links: string[] = [];
+  for (const [n, p] of item.photos.slice(0, 20).entries()) {
+    const path = `${userId}/export/${item.id}/${n + 1}.jpg`;
+    const blob = await renderPhoto(p);
+    await retry(async () => check(await supabase.storage.from(BUCKET).upload(path, blob, { contentType: "image/jpeg", upsert: true })));
+    const signed = check(await supabase.storage.from(BUCKET).createSignedUrl(path, 14 * 24 * 3600));
+    links.push(signed.signedUrl);
+  }
+  return links;
+}
+
+export async function markExported(ids: string[], listed: boolean): Promise<void> {
+  if (!ids.length) return;
+  ok(await supabase.from("items").update({ exported_at: new Date().toISOString(), ...(listed ? { status: "listed" } : {}) }).in("id", ids));
 }

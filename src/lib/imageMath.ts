@@ -44,3 +44,35 @@ export function cropRect(
   const x1 = Math.min(1, crop.x + crop.w + pad), y1 = Math.min(1, crop.y + crop.h + pad);
   return { sx: Math.round(x0 * w), sy: Math.round(y0 * h), sw: Math.round((x1 - x0) * w), sh: Math.round((y1 - y0) * h) };
 }
+
+/** Min-max normalise a saliency map to 0..1 (what rembg does with U2-Net output). */
+export function normalizeMask(pred: Float32Array): Float32Array {
+  let mi = Infinity, ma = -Infinity;
+  for (const v of pred) { if (v < mi) mi = v; if (v > ma) ma = v; }
+  const out = new Float32Array(pred.length);
+  const range = ma - mi || 1;
+  for (let i = 0; i < pred.length; i++) out[i] = (pred[i] - mi) / range;
+  return out;
+}
+
+/** Sharpen soft mask edges a little so the background goes properly white. */
+export function alphaCurve(a: number): number {
+  return Math.min(1, Math.max(0, (a - 0.12) / 0.7));
+}
+
+/** Bounding box (fractions) of mask pixels above threshold, plus the share of the image covered. */
+export function maskBox(mask: Float32Array, w: number, h: number, threshold = 0.5):
+  { x: number; y: number; w: number; h: number; coverage: number } | null {
+  let x0 = w, y0 = h, x1 = -1, y1 = -1, n = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (mask[y * w + x] > threshold) {
+        n++;
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (!n) return null;
+  return { x: x0 / w, y: y0 / h, w: (x1 - x0 + 1) / w, h: (y1 - y0 + 1) / h, coverage: n / (w * h) };
+}

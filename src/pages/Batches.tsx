@@ -36,7 +36,7 @@ export default function Batches() {
 
   return (
     <>
-      <Header title="Batches" right={<button className="link" onClick={() => supabase.auth.signOut()}>Sign out</button>} />
+      <Header title="Batches" right={<><a className="link" href="#/settings">Settings</a><button className="link" onClick={() => supabase.auth.signOut()}>Sign out</button></>} />
       <main className="page">
         <form onSubmit={add} className="card row">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New batch name (e.g. Garage clear-out)" maxLength={80} />

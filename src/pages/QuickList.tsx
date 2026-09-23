@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import Header from "../components/Header";
 import Thumb from "../components/Thumb";
-import { downloadPhoto, listItems, updateItem } from "../lib/api";
+import { listItems, renderPhoto, updateItem } from "../lib/api";
 import { fullDescription } from "../lib/csv";
-import { renderFinal } from "../lib/image";
 import type { Item } from "../lib/types";
 
 const SELL_URL = "https://www.trademe.co.nz/a/sell";
@@ -36,7 +35,7 @@ export default function QuickList({ batchId }: { batchId: string }) {
     setMsg("Preparing photos…");
     try {
       const files = await Promise.all(item.photos.map(async (p, i) => {
-        const blob = await renderFinal(await downloadPhoto(p.storage_path), p.rotation, p.crop);
+        const blob = await renderPhoto(p);
         return new File([blob], `${item.title.slice(0, 40).replace(/[^\w-]+/g, "_") || "item"}_${i + 1}.jpg`, { type: "image/jpeg" });
       }));
       if (navigator.canShare?.({ files })) {
@@ -74,7 +73,7 @@ export default function QuickList({ batchId }: { batchId: string }) {
 
   return (
     <>
-      <Header back={`#/b/${batchId}`} title="Quick list" right={queue.length ? <span className="badge">{Math.min(idx, queue.length - 1) + 1}/{queue.length}</span> : null} />
+      <Header back={`#/b/${batchId}`} title="Copy-paste mode" right={queue.length ? <span className="badge">{Math.min(idx, queue.length - 1) + 1}/{queue.length}</span> : null} />
       <main className="page">
         <label className="row small">
           <input type="checkbox" checked={includeDrafts} onChange={(e) => { setIncludeDrafts(e.target.checked); setIdx(0); }} />

@@ -52,7 +52,9 @@ describe("router", () => {
   it("parses routes and rejects junk", () => {
     const id = "3b241101-e2bb-4255-8caf-4136c566a962";
     expect(parseRoute(`#/b/${id}/capture`)).toEqual({ name: "capture", id });
-    expect(parseRoute(`#/i/${id}`)).toEqual({ name: "item", id });
+    expect(parseRoute(`#/i/${id}`)).toEqual({ name: "item", id, review: false });
+    expect(parseRoute(`#/i/${id}/review`)).toEqual({ name: "item", id, review: true });
+    expect(parseRoute(`#/b/${id}/export`)).toEqual({ name: "export", id });
     expect(parseRoute("#/b/<script>")).toEqual({ name: "batches" });
   });
 });

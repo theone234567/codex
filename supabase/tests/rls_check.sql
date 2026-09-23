@@ -6,6 +6,7 @@ insert into batches (id,name) values ('11111111-1111-4111-8111-111111111111','A 
 insert into items (id,batch_id) values ('22222222-2222-4222-8222-222222222222','11111111-1111-4111-8111-111111111111');
 insert into photos (item_id, storage_path) values ('22222222-2222-4222-8222-222222222222','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/2/p.jpg');
 select 'A sees items', count(*) from items;
+insert into settings (prefs) values ('{"x":1}');
 \echo '--- A: photo path in B folder (expect error)'
 insert into photos (item_id, storage_path) values ('22222222-2222-4222-8222-222222222222','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/x.jpg');
 \echo '--- A: set own ai_usage (expect permission denied)'
@@ -15,6 +16,11 @@ select consume_ai_quota('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 999999);
 -- user B
 select set_config('request.jwt.claim.sub','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',false);
 select 'B sees A items/batches/photos', (select count(*) from items),(select count(*) from batches),(select count(*) from photos);
+select 'B sees A settings', count(*) from settings;
+\echo '--- B: write settings as A (expect RLS error)'
+insert into settings (user_id, prefs) values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '{}');
+\echo '--- B: call usage fn (expect permission denied)'
+select record_ai_usage('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 0, 0, -100, true);
 \echo '--- B: add item to A batch (expect error)'
 insert into items (batch_id) values ('11111111-1111-4111-8111-111111111111');
 \echo '--- B: forge user_id (expect RLS error)'

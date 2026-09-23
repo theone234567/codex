@@ -17,6 +17,8 @@ export default function Capture({ batchId, userId }: { batchId: string; userId: 
   const [error, setError] = useState("");
   const [flash, setFlash] = useState(false);
   const [groupFiles, setGroupFiles] = useState<File[] | null>(null);
+  const [toast, setToast] = useState("");
+  const [dragging, setDragging] = useState(false);
 
   const chain = useRef<Promise<unknown>>(Promise.resolve());
   const current = useRef<{ item: Item; photos: number } | null>(null);
@@ -93,12 +95,27 @@ export default function Capture({ batchId, userId }: { batchId: string; userId: 
   }
 
   function nextItem() {
+    if (shots.length) {
+      setToast(`✓ Item ${itemCount} saved – now shooting item ${itemCount + 1}`);
+      setTimeout(() => setToast(""), 1800);
+    }
     shots.forEach(URL.revokeObjectURL);
     setShots([]);
     chain.current = chain.current.then(() => { current.current = null; });
   }
 
-  function onFiles(files: FileList | null) {
+  // Desktop shortcuts: Space = take photo, N or Enter = next item
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (groupFiles || (e.target as HTMLElement)?.tagName === "INPUT") return;
+      if (e.code === "Space") { e.preventDefault(); shoot(); }
+      if (e.key === "n" || e.key === "N" || e.key === "Enter") { e.preventDefault(); nextItem(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  function onFiles(files: FileList | null | undefined) {
     if (!files?.length) return;
     const list = [...files].filter((f) => f.type.startsWith("image/")).sort((a, b) => a.lastModified - b.lastModified);
     setGroupFiles(list);
@@ -119,14 +136,20 @@ export default function Capture({ batchId, userId }: { batchId: string; userId: 
   return (
     <>
       <Header back={`#/b/${batchId}`} title={`${itemCount} items`} right={pending > 0 ? <span className="badge">⬆ {pending}</span> : <span className="badge ok">✓ saved</span>} />
-      <main className="capture">
+      <main
+        className={`capture ${dragging ? "dragging" : ""}`}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); onFiles(e.dataTransfer?.files); }}
+      >
+        {toast && <div className="toast" role="status">{toast}</div>}
         {cameraOk !== false ? (
           <div className={`viewfinder ${flash ? "flash" : ""}`}>
             <video ref={videoRef} playsInline muted />
           </div>
         ) : (
           <div className="card center">
-            <p>Camera not available in this browser. Use your camera app or gallery instead:</p>
+            <p>No camera here. Drag &amp; drop photos onto this page, or:</p>
             <label className="button primary">
               Take / choose photos
               <input hidden type="file" accept="image/*" capture="environment" multiple onChange={(e) => onFiles(e.target.files)} />
@@ -136,7 +159,9 @@ export default function Capture({ batchId, userId }: { batchId: string; userId: 
 
         <div className="strip">
           {shots.map((u, i) => <img key={u} src={u} alt={`photo ${i + 1}`} />)}
-          <span className="muted small">{shots.length ? `Item ${itemCount} · ${shots.length} photo${shots.length > 1 ? "s" : ""}` : "Tip: photo 1 = front, photo 2 = back/label"}</span>
+          <span className="muted small">{shots.length
+            ? `Item ${itemCount} · ${shots.length} photo${shots.length > 1 ? "s" : ""} – tap Next item when done`
+            : "Tip: photo 1 = front, photo 2 = back/label. On a computer you can drag & drop photos here."}</span>
         </div>
 
         <div className="controls">
@@ -145,7 +170,7 @@ export default function Capture({ batchId, userId }: { batchId: string; userId: 
             <input hidden type="file" accept="image/*" multiple onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
           </label>
           <button className="shutter" onClick={shoot} disabled={!cameraOk} aria-label="Take photo" />
-          <button className="button primary" onClick={nextItem} disabled={!shots.length}>Next item ›</button>
+          <button className="button primary next" onClick={nextItem} disabled={!shots.length} title="Shortcut: N">Next item ›</button>
         </div>
         {pending > 0
           ? <button className="button wide" disabled>Saving {pending} photo{pending > 1 ? "s" : ""}…</button>

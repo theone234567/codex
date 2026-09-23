@@ -14,6 +14,8 @@ export interface Photo {
   height: number | null;
   rotation: 0 | 90 | 180 | 270;
   crop: Crop | null;
+  bg_status: "none" | "done" | "failed";
+  use_white: boolean;
 }
 
 export interface Item {
@@ -39,5 +41,36 @@ export interface Item {
   shipping_size: string;
   weight_kg: number | null;
   needs_check: string[];
+  tm_category: string;
+  price_check: PriceCheck | null;
+  price_checked_at: string | null;
+  exported_at: string | null;
   photos: Photo[];
 }
+
+export interface PriceCheck {
+  found: boolean;
+  low: number | null;
+  high: number | null;
+  typical: number | null;
+  start: number;
+  buy_now: number | null;
+  summary: string;
+  sources: { url: string; title: string }[];
+}
+
+export interface Prefs {
+  whiteBg: "all" | "main" | "off";
+  autoPriceCheck: boolean;
+  priceCheckMin: number;
+}
+
+export interface TmTemplate { headers: string[]; defaults: string[]; loadedAt: string }
+
+export interface Settings {
+  prefs: Prefs;
+  tm_template: TmTemplate | null;
+  category_map: Record<string, string>;
+}
+
+export const DEFAULT_PREFS: Prefs = { whiteBg: "all", autoPriceCheck: true, priceCheckMin: 15 };

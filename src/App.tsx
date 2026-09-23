@@ -8,6 +8,8 @@ import BatchView from "./pages/BatchView";
 import Capture from "./pages/Capture";
 import ItemEditor from "./pages/ItemEditor";
 import QuickList from "./pages/QuickList";
+import ExportPage from "./pages/Export";
+import SettingsPage from "./pages/Settings";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -39,7 +41,9 @@ export default function App() {
     case "batch": return <BatchView key={route.id} batchId={route.id} />;
     case "capture": return <Capture key={route.id} batchId={route.id} userId={userId} />;
     case "quicklist": return <QuickList key={route.id} batchId={route.id} />;
-    case "item": return <ItemEditor key={route.id} itemId={route.id} />;
+    case "item": return <ItemEditor key={route.id} itemId={route.id} review={route.review} />;
+    case "export": return <ExportPage key={route.id} batchId={route.id} userId={userId} />;
+    case "settings": return <SettingsPage />;
     default: return <Batches />;
   }
 }
