@@ -2,6 +2,9 @@ import { useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase";
 import { isEmail, normalizePhone } from "../lib/phone";
 
+// Email codes are free. Text-message codes cost money per SMS, so they're off unless VITE_ENABLE_PHONE=true.
+const PHONE_ENABLED = import.meta.env.VITE_ENABLE_PHONE === "true";
+
 type Step = { kind: "enter" } | { kind: "code"; email?: string; phone?: string };
 
 export default function Login() {
@@ -60,10 +63,10 @@ export default function Login() {
 
       {step.kind === "enter" ? (
         <form onSubmit={sendCode} className="card stack">
-          <div className="tabs">
+          {PHONE_ENABLED && <div className="tabs">
             <button type="button" className={mode === "email" ? "on" : ""} onClick={() => { setMode("email"); setValue(""); }}>Email</button>
             <button type="button" className={mode === "phone" ? "on" : ""} onClick={() => { setMode("phone"); setValue(""); }}>Phone</button>
-          </div>
+          </div>}
           <label>
             {mode === "email" ? "Email address" : "Mobile number"}
             <input

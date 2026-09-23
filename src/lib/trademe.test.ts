@@ -8,7 +8,7 @@ const item = (over: Partial<Item> = {}): Item => ({
   description: "- Plays fine\n- Case ok", category_path: "Movies & TV > DVDs", condition: "Used",
   attributes: [{ name: "Region", value: "4" }], start_price: 3, buy_now_price: 6, price_confidence: "medium",
   price_reasoning: "", shipping_size: "Small parcel", weight_kg: 0.2, needs_check: [], tm_category: "",
-  price_check: null, price_checked_at: null, exported_at: null, photos: [], ...over,
+  price_check: null, price_checked_at: null, exported_at: null, ai_provider: null, photos: [], ...over,
 });
 
 describe("csv parsing", () => {

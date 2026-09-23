@@ -38,7 +38,7 @@ export default function App() {
 
   const userId = session.user.id;
   switch (route.name) {
-    case "batch": return <BatchView key={route.id} batchId={route.id} />;
+    case "batch": return <BatchView key={route.id} batchId={route.id} userId={userId} />;
     case "capture": return <Capture key={route.id} batchId={route.id} userId={userId} />;
     case "quicklist": return <QuickList key={route.id} batchId={route.id} />;
     case "item": return <ItemEditor key={route.id} itemId={route.id} review={route.review} />;

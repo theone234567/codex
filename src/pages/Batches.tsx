@@ -60,7 +60,7 @@ export default function Batches() {
         )}
         {usage && (
           <p className="muted small center">
-            AI today: {usage.calls} items · {(usage.input_tokens + usage.output_tokens).toLocaleString()} tokens
+            AI today: {usage.calls} calls · {(usage.input_tokens + usage.output_tokens).toLocaleString()} tokens · about US${(usage.est_cost_micro_usd / 1e6).toFixed(3)}
           </p>
         )}
       </main>

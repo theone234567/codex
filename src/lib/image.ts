@@ -4,7 +4,6 @@ import type { Crop } from "./types";
 
 export const MAIN_EDGE = 2048; // stored photo (good for Trade Me)
 export const THUMB_EDGE = 400; // grid thumbnails
-export const AI_EDGE = 768; // what the AI sees - small = fewer tokens (~600 per photo)
 
 function canvas(w: number, h: number): HTMLCanvasElement {
   const c = document.createElement("canvas");
@@ -68,14 +67,31 @@ export async function processPhoto(source: Blob, enhance = true): Promise<Proces
   return { main, thumb, width: size.w, height: size.h };
 }
 
-/** Small JPEG as base64 for the AI request. */
-export async function aiImageBase64(source: Blob): Promise<string> {
-  const bmp = await decode(source);
-  const size = fitWithin(bmp.width, bmp.height, AI_EDGE);
-  const c = canvas(size.w, size.h);
-  ctx2d(c).drawImage(bmp, 0, 0, size.w, size.h);
-  bmp.close();
-  const blob = await toJpeg(c, 0.7);
+/**
+ * One small JPEG with the item's photos side by side (each fitted to 640x480). Sending one
+ * combined image instead of several separate ones cuts the AI's image tokens by roughly 30-60%.
+ */
+export async function stitchForAi(sources: Blob[]): Promise<Blob> {
+  const bmps = await Promise.all(sources.slice(0, 2).map(decode));
+  const cells = bmps.map((b) => fitWithin(b.width, b.height, 640)).map((s, i) => {
+    const h = Math.min(s.h, 480);
+    return { w: Math.round((bmps[i].width / bmps[i].height) * h), h };
+  });
+  const H = Math.max(...cells.map((c) => c.h));
+  const c = canvas(cells.reduce((n, x) => n + x.w, 0) + (cells.length - 1) * 8, H);
+  const ctx = ctx2d(c);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  let x = 0;
+  bmps.forEach((b, i) => {
+    ctx.drawImage(b, x, Math.round((H - cells[i].h) / 2), cells[i].w, cells[i].h);
+    x += cells[i].w + 8;
+    b.close();
+  });
+  return toJpeg(c, 0.72);
+}
+
+export async function blobToBase64(blob: Blob): Promise<string> {
   const buf = new Uint8Array(await blob.arrayBuffer());
   let bin = "";
   for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));

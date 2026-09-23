@@ -48,6 +48,23 @@ export default function SettingsPage() {
       <Header back="#/" title="Settings" />
       <main className="page">
         <section className="card stack">
+          <b>Which AI writes your listings</b>
+          <div className="tabs">
+            <button className={s.prefs.aiProvider === "claude" ? "on" : ""} onClick={() => setPrefs({ aiProvider: "claude" })}>Claude</button>
+            <button className={s.prefs.aiProvider === "gemini" ? "on" : ""} onClick={() => setPrefs({ aiProvider: "gemini" })}>Gemini (free)</button>
+          </div>
+          <p className="muted small">
+            {s.prefs.aiProvider === "claude"
+              ? "Claude Haiku: best listings, about 0.2c per item in economy mode (0.4c instant)."
+              : "Gemini Flash-Lite free tier: $0 within Google's daily free limit (roughly 500-1,000 items a day). On the free tier Google may use your photos and text to improve its products."}
+          </p>
+          <label className="row"><input type="checkbox" checked={s.prefs.aiBackup} onChange={(e) => setPrefs({ aiBackup: e.target.checked })} />
+            Use the other AI as a backup if this one is busy, out of credit or over its free limit</label>
+          <label className="row"><input type="checkbox" checked={s.prefs.economy} disabled={s.prefs.aiProvider !== "claude"} onChange={(e) => setPrefs({ economy: e.target.checked })} />
+            Economy mode (Claude only): half price, listings arrive within minutes to an hour instead of seconds</label>
+        </section>
+
+        <section className="card stack">
           <b>White backgrounds</b>
           <p className="muted small">Done free on your device (desktop is fastest). The first time downloads a 44 MB model.</p>
           <select value={s.prefs.whiteBg} onChange={(e) => setPrefs({ whiteBg: e.target.value as Prefs["whiteBg"] })}>
@@ -59,7 +76,7 @@ export default function SettingsPage() {
 
         <section className="card stack">
           <b>Online price checks</b>
-          <p className="muted small">One web search per item using the cheapest AI, about 2 US cents each. Only items the AI values at or above the amount below are checked automatically, and you can check any item by hand.</p>
+          <p className="muted small">Compares with similar listings on Trade Me, which is free once the Trade Me API is set up (see the setup guide). Only items the AI values at or above the amount below are checked automatically, and you can check any item by hand.</p>
           <label className="row"><input type="checkbox" checked={s.prefs.autoPriceCheck} onChange={(e) => setPrefs({ autoPriceCheck: e.target.checked })} /> Check automatically</label>
           <label>Only for items worth at least $
             <input type="number" min={0} step={1} value={s.prefs.priceCheckMin} onChange={(e) => setPrefs({ priceCheckMin: Math.max(0, Number(e.target.value) || 0) })} />
@@ -101,7 +118,12 @@ export default function SettingsPage() {
           </section>
         )}
 
-        {usage && <p className="muted small center">AI today: {usage.calls} calls · {(usage.input_tokens + usage.output_tokens).toLocaleString()} tokens</p>}
+        {usage && (
+          <p className="muted small center">
+            AI today: {usage.calls} calls{usage.gemini_calls ? ` (${usage.gemini_calls} Gemini)` : ""} · {(usage.input_tokens + usage.output_tokens).toLocaleString()} tokens
+            · about US${(usage.est_cost_micro_usd / 1e6).toFixed(3)}
+          </p>
+        )}
         {msg && <p className="muted">{msg}</p>}
       </main>
     </>

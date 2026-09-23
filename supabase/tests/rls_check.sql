@@ -11,6 +11,8 @@ insert into settings (prefs) values ('{"x":1}');
 insert into photos (item_id, storage_path) values ('22222222-2222-4222-8222-222222222222','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/x.jpg');
 \echo '--- A: set own ai_usage (expect permission denied)'
 insert into ai_usage (user_id, calls) values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', -1000);
+\echo '--- A: create AI batch record (expect permission denied)'
+insert into ai_batches (user_id, anthropic_batch_id, item_ids) values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','x','{}');
 \echo '--- A: call quota fn (expect permission denied)'
 select consume_ai_quota('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 999999);
 -- user B
@@ -40,6 +42,7 @@ reset role; set role anon;
 \echo '--- anon read (expect permission denied)'
 select count(*) from items;
 reset role; set role service_role;
+select 'quota_n', consume_ai_quota_n('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 5, 3), consume_ai_quota_n('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 5, 3);
 select 'quota', consume_ai_quota('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2), consume_ai_quota('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2), consume_ai_quota('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 2);
 select record_ai_tokens('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 1000, 200, true);
 select 'usage', calls, input_tokens, output_tokens from ai_usage;

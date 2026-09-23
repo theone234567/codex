@@ -202,6 +202,7 @@ export default function ItemEditor({ itemId, review = false }: { itemId: string;
 
         <div className="editor-form stack">
           {draft.ai_error && <p className="error">{draft.ai_error}</p>}
+          {draft.ai_provider && <p className="muted small">Written by {draft.ai_provider === "gemini" ? "Gemini" : "Claude"}</p>}
           {error && <p className="error">{error}</p>}
           {busy && <p className="muted">{busy}</p>}
 
@@ -266,7 +267,7 @@ export default function ItemEditor({ itemId, review = false }: { itemId: string;
                 </span>
               </div>
             ) : (
-              <button className="button small" disabled={!!busy || !draft.title} onClick={checkPrice}>🔎 Check price online (~2c)</button>
+              <button className="button small" disabled={!!busy || !draft.title} onClick={checkPrice}>🔎 Check Trade Me prices</button>
             )}
 
             <b>Details</b>

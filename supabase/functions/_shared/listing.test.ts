@@ -6,7 +6,7 @@ const base = {
   item_type: "DVD", condition: "Used", brand: "DreamWorks", region: "Region 4",
   attributes: [{ name: "Format", value: "DVD" }], start_price: 3, buy_now_price: 6,
   price_confidence: "medium", price_reasoning: "Common title", shipping_size: "Small parcel",
-  weight_kg: 0.15, crop: { x: 0.1, y: 0.1, w: 0.7, h: 0.8 }, needs_check: [],
+  weight_kg: 0.15, needs_check: [],
 };
 
 describe("sanitizeListing", () => {
@@ -15,7 +15,6 @@ describe("sanitizeListing", () => {
     expect(r.title).toBe("Shrek 2 DVD");
     expect(r.attributes.slice(0, 3).map((a) => a.name)).toEqual(["Type", "Region", "Brand"]);
     expect(r.description).toBe("Great movie.\n\nPlays fine.");
-    expect(r.crop).toEqual({ x: 0.1, y: 0.1, w: 0.7, h: 0.8 });
   });
 
   it("strips HTML/script and control characters", () => {

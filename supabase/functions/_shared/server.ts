@@ -74,11 +74,26 @@ export async function takeQuota(userId: string): Promise<boolean> {
   return data === true;
 }
 
-export async function recordUsage(
-  userId: string, usage: { input: number; output: number; searches: number }, refund: boolean,
-): Promise<void> {
-  const { error } = await admin.rpc("record_ai_usage", {
-    p_user: userId, p_in: usage.input, p_out: usage.output, p_searches: usage.searches, p_refund: refund,
+export async function takeQuotaN(userId: string, n: number): Promise<number> {
+  const { data, error } = await admin.rpc("consume_ai_quota_n", { p_user: userId, p_limit: DAILY_LIMIT, p_n: n });
+  if (error) throw new Error(error.message);
+  return Number(data) || 0;
+}
+
+export interface Usage { input: number; output: number; searches: number; costMicro: number; gemini: boolean }
+export const NO_USAGE: Usage = { input: 0, output: 0, searches: 0, costMicro: 0, gemini: false };
+
+export async function recordUsage(userId: string, usage: Usage, refund: boolean): Promise<void> {
+  const { error } = await admin.rpc("record_ai_cost", {
+    p_user: userId, p_in: usage.input, p_out: usage.output, p_searches: usage.searches,
+    p_cost_micro: usage.costMicro, p_gemini: usage.gemini, p_refund: refund,
   });
   if (error) console.error("usage record failed", error.message);
+}
+
+/** The user's AI choices from Settings (read as the user, so RLS applies). */
+export async function getAiPrefs(db: SupabaseClient): Promise<{ provider: unknown; backup: unknown }> {
+  const { data } = await db.from("settings").select("prefs").maybeSingle();
+  const prefs = (data?.prefs ?? {}) as Record<string, unknown>;
+  return { provider: prefs.aiProvider, backup: prefs.aiBackup };
 }

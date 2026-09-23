@@ -1,10 +1,10 @@
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import { aiImageBase64, readBarcode, renderFinal, type Processed } from "./image";
+import { blobToBase64, readBarcode, renderFinal, stitchForAi, type Processed } from "./image";
 import { DEFAULT_PREFS, type Batch, type Item, type Photo, type PriceCheck, type Settings } from "./types";
 
 const BUCKET = "photos";
-export const AI_PHOTOS_PER_ITEM = 2; // front + back is usually enough; each extra photo ~600 tokens
+export const AI_PHOTOS_PER_ITEM = 2; // front + back, merged into one small image for the AI
 
 function check<T>(res: { data: T; error: { message: string } | null }): NonNullable<T> {
   if (res.error) throw new Error(res.error.message);
@@ -72,6 +72,7 @@ async function removeExports(list: { uid: string; itemId: string }[]): Promise<v
     if (seen.has(itemId)) continue;
     seen.add(itemId);
     for (let n = 1; n <= 20; n++) paths.push(`${uid}/export/${itemId}/${n}.jpg`);
+    paths.push(`${uid}/${itemId}/ai.jpg`);
   }
   for (let i = 0; i < paths.length; i += 100) await supabase.storage.from(BUCKET).remove(paths.slice(i, i + 100));
 }
@@ -148,7 +149,20 @@ export async function signedUrls(paths: string[]): Promise<Record<string, string
 }
 
 // ---------- AI ----------
-export async function analyzeItem(item: Item): Promise<void> {
+async function invoke<T>(fn: string, body: Record<string, unknown>, fallbackMsg: string): Promise<T> {
+  const { data, error } = await supabase.functions.invoke(fn, { body });
+  if (error) {
+    let msg = fallbackMsg;
+    if (error instanceof FunctionsHttpError) {
+      try { msg = (await error.context.json()).error ?? msg; } catch { /* keep default */ }
+    }
+    throw new Error(msg);
+  }
+  return data as T;
+}
+
+/** Read a barcode (free, on device) and build the single combined photo the AI will see. */
+async function prepareAi(item: Item): Promise<{ image: Blob; barcode: string }> {
   const photos = item.photos.slice(0, AI_PHOTOS_PER_ITEM);
   if (!photos.length) throw new Error("Add a photo first");
   const blobs = await Promise.all(photos.map((p) => downloadPhoto(p.storage_path)));
@@ -160,22 +174,42 @@ export async function analyzeItem(item: Item): Promise<void> {
     }
     if (barcode) await updateItem(item.id, { barcode });
   }
-  const images = await Promise.all(blobs.map(aiImageBase64));
-  const { error } = await supabase.functions.invoke("analyze-item", {
-    body: { itemId: item.id, images, hint: item.hint.slice(0, 300), barcode },
-  });
-  if (error) {
-    let msg = "AI request failed";
-    if (error instanceof FunctionsHttpError) {
-      try { msg = (await error.context.json()).error ?? msg; } catch { /* keep default */ }
-    }
-    throw new Error(msg);
-  }
+  return { image: await stitchForAi(blobs), barcode };
 }
 
-export async function usageToday(): Promise<{ calls: number; input_tokens: number; output_tokens: number } | null> {
+/** Instant mode: write the listing now. */
+export async function analyzeItem(item: Item): Promise<void> {
+  const { image, barcode } = await prepareAi(item);
+  await invoke("analyze-item", {
+    itemId: item.id, images: [await blobToBase64(image)], hint: item.hint.slice(0, 300), barcode,
+  }, "AI request failed");
+}
+
+export const aiImagePath = (userId: string, itemId: string) => `${userId}/${itemId}/ai.jpg`;
+
+/** Economy mode step 1: store the combined photo and mark the item as queued for the next batch. */
+export async function queueForEconomy(userId: string, item: Item): Promise<void> {
+  const { image } = await prepareAi(item);
+  await retry(async () => check(await supabase.storage.from(BUCKET)
+    .upload(aiImagePath(userId, item.id), image, { contentType: "image/jpeg", upsert: true })));
+  ok(await supabase.from("items").update({ ai_status: "queued", ai_error: null }).eq("id", item.id));
+}
+
+/** Economy mode step 2: send everything queued as one half-price batch. */
+export function submitEconomy(): Promise<{ submitted: number; instant?: boolean; reason?: string }> {
+  return invoke("ai-batch", { action: "submit" }, "Couldn't send the batch");
+}
+
+/** Economy mode step 3: collect finished listings. */
+export function pollEconomy(): Promise<{ saved: number; pending: number }> {
+  return invoke("ai-batch", { action: "poll" }, "Couldn't check the batch");
+}
+
+export async function usageToday(): Promise<{
+  calls: number; input_tokens: number; output_tokens: number; est_cost_micro_usd: number; gemini_calls: number;
+} | null> {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Pacific/Auckland" }).format(new Date());
-  const { data } = await supabase.from("ai_usage").select("calls,input_tokens,output_tokens")
+  const { data } = await supabase.from("ai_usage").select("calls,input_tokens,output_tokens,est_cost_micro_usd,gemini_calls")
     .eq("day", today).maybeSingle();
   return data;
 }
@@ -218,16 +252,8 @@ export async function makeWhite(p: Photo): Promise<boolean> {
 }
 
 // ---------- online price check ----------
-export async function priceCheck(item: Item): Promise<{ applied: boolean; check: PriceCheck }> {
-  const { data, error } = await supabase.functions.invoke("price-check", { body: { itemId: item.id } });
-  if (error) {
-    let msg = "Price check failed";
-    if (error instanceof FunctionsHttpError) {
-      try { msg = (await error.context.json()).error ?? msg; } catch { /* keep default */ }
-    }
-    throw new Error(msg);
-  }
-  return data;
+export function priceCheck(item: Item): Promise<{ applied: boolean; source: string; check: PriceCheck }> {
+  return invoke("price-check", { itemId: item.id }, "Price check failed");
 }
 
 // ---------- settings (shared between phone and desktop) ----------

@@ -3,7 +3,7 @@ export interface Crop { x: number; y: number; w: number; h: number }
 export interface Batch { id: string; name: string; created_at: string }
 
 export type ItemStatus = "draft" | "ready" | "listed" | "sold";
-export type AiStatus = "pending" | "processing" | "done" | "failed" | "skipped";
+export type AiStatus = "pending" | "queued" | "batched" | "processing" | "done" | "failed" | "skipped";
 
 export interface Photo {
   id: string;
@@ -45,6 +45,7 @@ export interface Item {
   price_check: PriceCheck | null;
   price_checked_at: string | null;
   exported_at: string | null;
+  ai_provider: "claude" | "gemini" | null;
   photos: Photo[];
 }
 
@@ -60,6 +61,9 @@ export interface PriceCheck {
 }
 
 export interface Prefs {
+  aiProvider: "claude" | "gemini";
+  aiBackup: boolean; // use the other AI if the chosen one fails / runs out
+  economy: boolean; // Claude Batch API: 50% off, results within minutes-hours
   whiteBg: "all" | "main" | "off";
   autoPriceCheck: boolean;
   priceCheckMin: number;
@@ -73,4 +77,6 @@ export interface Settings {
   category_map: Record<string, string>;
 }
 
-export const DEFAULT_PREFS: Prefs = { whiteBg: "all", autoPriceCheck: true, priceCheckMin: 15 };
+export const DEFAULT_PREFS: Prefs = {
+  aiProvider: "claude", aiBackup: true, economy: true, whiteBg: "all", autoPriceCheck: true, priceCheckMin: 5,
+};
