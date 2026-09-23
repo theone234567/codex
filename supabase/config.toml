@@ -1,0 +1,18 @@
+# Only the settings klickList relies on. Run `supabase init` first if you want the full file,
+# then copy these sections across.
+project_id = "klicklist"
+
+[auth]
+site_url = "http://localhost:5173"
+enable_signup = false          # private by default: only accounts you create can sign in
+
+[auth.email]
+enable_signup = false
+otp_length = 6
+otp_expiry = 600
+
+[auth.sms]
+enable_signup = false
+
+[functions.analyze-item]
+verify_jwt = true

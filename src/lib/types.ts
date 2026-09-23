@@ -1,0 +1,43 @@
+export interface Crop { x: number; y: number; w: number; h: number }
+
+export interface Batch { id: string; name: string; created_at: string }
+
+export type ItemStatus = "draft" | "ready" | "listed" | "sold";
+export type AiStatus = "pending" | "processing" | "done" | "failed" | "skipped";
+
+export interface Photo {
+  id: string;
+  item_id: string;
+  storage_path: string;
+  position: number;
+  width: number | null;
+  height: number | null;
+  rotation: 0 | 90 | 180 | 270;
+  crop: Crop | null;
+}
+
+export interface Item {
+  id: string;
+  batch_id: string;
+  position: number;
+  status: ItemStatus;
+  ai_status: AiStatus;
+  ai_error: string | null;
+  ai_updated_at: string | null;
+  hint: string;
+  barcode: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  category_path: string;
+  condition: "New" | "Used" | "Refurbished" | "Unknown";
+  attributes: { name: string; value: string }[];
+  start_price: number | null;
+  buy_now_price: number | null;
+  price_confidence: "low" | "medium" | "high" | null;
+  price_reasoning: string;
+  shipping_size: string;
+  weight_kg: number | null;
+  needs_check: string[];
+  photos: Photo[];
+}
