@@ -15,9 +15,7 @@ Allow about 30 minutes. You need free accounts with **Supabase**, **Anthropic** 
    - Turn **off** "Allow new users to sign up". This keeps the app private.
    - Make sure **Email** is enabled.
    - Optional (costs about NZ$0.15 per text): enable **Phone**, enter your Twilio details, set `VITE_ENABLE_PHONE=true` in step 3, and in the Twilio console under *Messaging → Geo permissions* allow **New Zealand only**. This blocks SMS-fraud charges.
-4. **Authentication → Emails → Templates → Magic Link**: replace the body with something like
-   `Your klickList code is {{ .Token }}`
-   so people get a 6-digit code. Codes work better than links in a home-screen app.
+4. Sign-in emails contain a **sign-in link** by default, and klickList accepts that. Optionally, once you've added your own SMTP (next step), edit **Authentication → Emails → Magic link or OTP** to include `{{ .Token }}` so the email also shows a 6-digit code. Codes work better inside an installed home-screen app, because links open in the normal browser.
 5. **Authentication → Emails → SMTP Settings**: add an SMTP provider. Resend is free for 3,000 emails a month. Supabase's built-in email only sends a few messages an hour and is meant for testing.
 6. **Authentication → Users → Add user**: create yourself with your email and/or mobile number (+64…) and tick "Auto confirm".
 7. **Project Settings → API**: copy the **Project URL** and the **anon public** key for step 3.
@@ -70,7 +68,7 @@ In the app, **Settings → Which AI** chooses Claude or Gemini, whether the othe
 2. Set the build command to `npm run build` and the output folder to `dist`.
 3. Under **Environment variables**, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (from step 1.7).
 4. Deploy. You get an address like `https://klicklist.pages.dev`.
-5. Back in Supabase, go to **Authentication → URL Configuration** and set **Site URL** to that address. Update `ALLOWED_ORIGINS` if you haven't already, then run `supabase functions deploy analyze-item ai-batch price-check` again.
+5. Back in Supabase, go to **Authentication → URL Configuration**, set **Site URL** to that address, and add it under **Redirect URLs** too, so sign-in links return to your site. Update `ALLOWED_ORIGINS` if you haven't already, then run `supabase functions deploy analyze-item ai-batch price-check` again.
 
 Netlify works the same way. `public/_headers` sets the security headers on both. If you use a custom domain for Supabase, add it to `connect-src` and `img-src` in `public/_headers`.
 

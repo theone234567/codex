@@ -23,7 +23,9 @@ export default function Login() {
       if (mode === "email") {
         if (!isEmail(value)) throw new Error("Enter a valid email address");
         const email = value.trim().toLowerCase();
-        const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+        const { error } = await supabase.auth.signInWithOtp({
+          email, options: { shouldCreateUser: false, emailRedirectTo: window.location.origin },
+        });
         if (error) throw error;
         setStep({ kind: "code", email });
       } else {
@@ -84,7 +86,9 @@ export default function Login() {
         </form>
       ) : (
         <form onSubmit={verify} className="card stack">
-          <p>We sent a 6-digit code to <b>{step.email ?? step.phone}</b>.</p>
+          {step.email
+            ? <p>We emailed <b>{step.email}</b>. Tap the <b>sign-in link</b> in that email on this device, or type the code here if the email shows one.</p>
+            : <p>We sent a 6-digit code to <b>{step.phone}</b>.</p>}
           <label>
             Code
             <input
