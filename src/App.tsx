@@ -28,7 +28,7 @@ export default function App() {
   if (!configured) {
     return (
       <main className="page narrow">
-        <h1>klickList</h1>
+        <h1 className="logo">Klick<span>List</span></h1>
         <p>Not configured yet. Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> (see docs/SETUP.md).</p>
       </main>
     );

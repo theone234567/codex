@@ -9,6 +9,9 @@
   --danger: #dc2626;
   --warn-bg: #fef3c7;
   --radius: 14px;
+  /* Logo colours: "Klick" in black, "List" in the Klickex logo blue. Change --logo-blue to the exact hex if needed. */
+  --logo-ink: #000000;
+  --logo-blue: #0072bc;
   color-scheme: light dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -21,6 +24,8 @@
     --line: #1e293b;
     --brand: #14b8a6;
     --warn-bg: #3b2f0b;
+    --logo-ink: #ffffff; /* black text would disappear on the dark background */
+    --logo-blue: #3aa0e8;
   }
 }
 * { box-sizing: border-box; }
@@ -32,8 +37,8 @@ code { background: var(--line); padding: 1px 4px; border-radius: 4px; }
 .page { max-width: 960px; margin: 0 auto; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 12px; }
 .narrow { max-width: 420px; }
 .login { padding-top: 12vh; }
-.logo { font-weight: 800; letter-spacing: -0.02em; font-size: 2.4rem; margin: 0; }
-.logo span { color: var(--brand); }
+.logo { font-weight: 800; letter-spacing: -0.02em; font-size: 2.4rem; margin: 0; color: var(--logo-ink); }
+.logo span { color: var(--logo-blue); }
 .logo.small { font-size: 1.1rem; }
 
 .bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 10px 16px;
