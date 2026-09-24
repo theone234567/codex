@@ -7,9 +7,31 @@ const ALLOWED_USERS = (Deno.env.get("ALLOWED_USERS") ?? "")
   .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 export const DAILY_LIMIT = Number(Deno.env.get("AI_DAILY_LIMIT") ?? "150");
 
+/**
+ * Supabase provides its keys to Edge Functions under legacy names (SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY)
+ * and, on newer projects, as SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS (a JSON map like {"default":"sb_..."}).
+ * Accept either.
+ */
+export function pickKey(legacy: string | undefined, modern: string | undefined): string {
+  if (legacy) return legacy;
+  if (!modern) return "";
+  try {
+    const parsed = JSON.parse(modern);
+    if (typeof parsed === "string") return parsed;
+    if (parsed && typeof parsed === "object") {
+      const map = parsed as Record<string, unknown>;
+      const v = map.default ?? Object.values(map)[0];
+      return typeof v === "string" ? v : "";
+    }
+  } catch { /* plain string */ }
+  return modern;
+}
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-export const admin = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+const SUPABASE_ANON_KEY = pickKey(Deno.env.get("SUPABASE_ANON_KEY"), Deno.env.get("SUPABASE_PUBLISHABLE_KEYS"));
+const SERVICE_KEY = pickKey(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"), Deno.env.get("SUPABASE_SECRET_KEYS"));
+if (!SUPABASE_ANON_KEY || !SERVICE_KEY) console.error("Supabase keys missing from the function environment");
+export const admin = createClient(SUPABASE_URL, SERVICE_KEY || "missing", {
   auth: { persistSession: false },
 });
 
@@ -44,7 +66,7 @@ export async function authenticate(req: Request): Promise<Caller | Response> {
   const authHeader = req.headers.get("Authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) return json({ error: "Sign in first" }, 401, origin);
   // This client acts as the user, so Row Level Security applies to every query below.
-  const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY || "missing", {
     global: { headers: { Authorization: authHeader } },
     auth: { persistSession: false },
   });

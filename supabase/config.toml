@@ -14,5 +14,14 @@ otp_expiry = 600
 [auth.sms]
 enable_signup = false
 
+# Each function checks the caller's sign-in itself (auth.getUser + allowlist), which works with both the
+# legacy and the newer Supabase key types. The gateway's own JWT check is off because it doesn't
+# understand the newer keys.
 [functions.analyze-item]
-verify_jwt = true
+verify_jwt = false
+
+[functions.ai-batch]
+verify_jwt = false
+
+[functions.price-check]
+verify_jwt = false

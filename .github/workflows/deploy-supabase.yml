@@ -1,0 +1,74 @@
+# One-click deploy of the AI server functions to Supabase - no command line needed.
+# Setup (once): GitHub repo -> Settings -> Secrets and variables -> Actions -> "New repository secret":
+#   SUPABASE_ACCESS_TOKEN   (supabase.com/dashboard/account/tokens)          required
+#   SUPABASE_PROJECT_REF    (the id in your project URL, e.g. mbqnmdhuanjldmhkbcld) required
+#   GEMINI_API_KEY / ANTHROPIC_API_KEY                                          at least one
+#   ALLOWED_ORIGINS         e.g. https://klicklist-app.pages.dev                recommended
+#   ALLOWED_USERS           your email                                          recommended
+#   optional: TRADEME_CONSUMER_KEY, TRADEME_CONSUMER_SECRET, TRADEME_SANDBOX, AI_DAILY_LIMIT,
+#             AI_MODEL, GEMINI_MODEL, PRICE_SOURCES
+# Then: Actions tab -> "Deploy Supabase functions" -> Run workflow.
+name: Deploy Supabase functions
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-supabase
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required settings
+        run: |
+          missing=0
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || { echo "::error::Add the SUPABASE_ACCESS_TOKEN secret"; missing=1; }
+          [ -n "$PROJECT_REF" ] || { echo "::error::Add the SUPABASE_PROJECT_REF secret"; missing=1; }
+          exit $missing
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Save API keys as Supabase function secrets
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TRADEME_CONSUMER_KEY: ${{ secrets.TRADEME_CONSUMER_KEY }}
+          TRADEME_CONSUMER_SECRET: ${{ secrets.TRADEME_CONSUMER_SECRET }}
+          TRADEME_SANDBOX: ${{ secrets.TRADEME_SANDBOX }}
+          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+          ALLOWED_USERS: ${{ secrets.ALLOWED_USERS }}
+          AI_DAILY_LIMIT: ${{ secrets.AI_DAILY_LIMIT }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          PRICE_SOURCES: ${{ secrets.PRICE_SOURCES }}
+        run: |
+          args=()
+          for k in ANTHROPIC_API_KEY GEMINI_API_KEY TRADEME_CONSUMER_KEY TRADEME_CONSUMER_SECRET TRADEME_SANDBOX \
+                   ALLOWED_ORIGINS ALLOWED_USERS AI_DAILY_LIMIT AI_MODEL GEMINI_MODEL PRICE_SOURCES; do
+            v="${!k}"
+            if [ -n "$v" ]; then args+=("$k=$v"); echo "setting $k"; fi
+          done
+          if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$GEMINI_API_KEY" ]; then
+            echo "::warning::No AI key set - add GEMINI_API_KEY and/or ANTHROPIC_API_KEY"
+          fi
+          if [ ${#args[@]} -gt 0 ]; then
+            supabase secrets set --project-ref "$PROJECT_REF" "${args[@]}" > /dev/null
+          fi
+
+      - name: Deploy functions
+        run: |
+          for fn in analyze-item ai-batch price-check; do
+            supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --use-api --no-verify-jwt
+          done
