@@ -50,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Apply migration on a Supabase-like stub
-        run: psql -v ON_ERROR_STOP=1 -q -f supabase/tests/supabase_stub.sql -f supabase/migrations/20260923000000_init.sql -f supabase/migrations/20260924000000_whitebg_pricecheck_export.sql -f supabase/migrations/20260925000000_economy_gemini.sql
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/tests/supabase_stub.sql -f supabase/migrations/20260923000000_init.sql -f supabase/migrations/20260924000000_whitebg_pricecheck_export.sql -f supabase/migrations/20260925000000_economy_gemini.sql -f supabase/migrations/20260926000000_explicit_grants.sql
       - name: Row Level Security checks
         run: |
           out=$(psql -q -At -f supabase/tests/rls_check.sql 2>&1)
