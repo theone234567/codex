@@ -1,0 +1,66 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx vite build
+
+  edge-function:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno check --config deno.json index.ts
+        working-directory: supabase/functions/analyze-item
+      - run: deno check --config deno.json index.ts
+        working-directory: supabase/functions/price-check
+      - run: deno check --config deno.json index.ts
+        working-directory: supabase/functions/ai-batch
+
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply migration on a Supabase-like stub
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/tests/supabase_stub.sql -f supabase/migrations/20260923000000_init.sql -f supabase/migrations/20260924000000_whitebg_pricecheck_export.sql -f supabase/migrations/20260925000000_economy_gemini.sql -f supabase/migrations/20260926000000_explicit_grants.sql
+      - name: Row Level Security checks
+        run: |
+          out=$(psql -q -At -f supabase/tests/rls_check.sql 2>&1)
+          echo "$out"
+          echo "$out" | grep -q "B sees A items/batches/photos|0|0|0"
+          echo "$out" | grep -q "permission denied for function consume_ai_quota"
+          echo "$out" | grep -q "permission denied for table ai_usage"
+          echo "$out" | grep -q "quota|t|t|f"
+          echo "$out" | grep -q "B sees A settings|0"
+          echo "$out" | grep -q "permission denied for table ai_batches"
+          echo "$out" | grep -q "quota_n|3|2"
+          echo "$out" | grep -q "permission denied for function record_ai_usage"
+          echo "$out" | grep -q "A item title still||11111111-1111-4111-8111-111111111111"

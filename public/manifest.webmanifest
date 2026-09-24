@@ -1,0 +1,10 @@
+{
+  "name": "klickList",
+  "short_name": "klickList",
+  "description": "Snap a batch of items, let AI write the Trade Me listings, list fast.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f766e",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
