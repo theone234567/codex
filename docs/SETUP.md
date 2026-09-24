@@ -40,25 +40,21 @@ You need **at least one** AI key. Having both lets each back up the other.
 2. You receive a **consumer key** and **consumer secret**. New apps may start on Trade Me's sandbox (`tmsandbox.co.nz`) until Trade Me approves production access. Set `TRADEME_SANDBOX=true` while you're on the sandbox.
 3. Until this is set up, price checks use a Claude web search instead (about 2c each), or you can turn them off in Settings.
 
-**Save the keys on the server and deploy:**
-```bash
-supabase secrets set \
-  ANTHROPIC_API_KEY=sk-ant-... \
-  GEMINI_API_KEY=... \
-  TRADEME_CONSUMER_KEY=... TRADEME_CONSUMER_SECRET=... \
-  ALLOWED_ORIGINS=https://klicklist.pages.dev \
-  ALLOWED_USERS=you@example.com \
-  AI_DAILY_LIMIT=150
-# optional:
-#   AI_MODEL=claude-sonnet-5|claude-opus-5   better but pricier (default claude-haiku-4-5)
-#   GEMINI_MODEL=...                          default gemini-3.1-flash-lite
-#   PRICE_SOURCES=trademe,claude              fall back to a paid web search when Trade Me finds nothing
-supabase functions deploy analyze-item
-supabase functions deploy ai-batch
-supabase functions deploy price-check
-```
-- `ALLOWED_ORIGINS` is your website address from step 3. You can come back and set it afterwards.
-- `ALLOWED_USERS` is optional but recommended. It's a list of the emails that may use the AI.
+**Save the keys and deploy the AI functions (no command line needed):**
+1. Create a Supabase access token at <https://supabase.com/dashboard/account/tokens> (name it `github-deploy`).
+2. On GitHub, open the repo → **Settings → Secrets and variables → Actions → New repository secret** and add:
+
+   | Name | Value |
+   |---|---|
+   | `SUPABASE_ACCESS_TOKEN` | the token from step 1 |
+   | `SUPABASE_PROJECT_REF` | the id in your Supabase URL (e.g. `mbqnmdhuanjldmhkbcld`) |
+   | `GEMINI_API_KEY` and/or `ANTHROPIC_API_KEY` | your AI key(s) |
+   | `ALLOWED_ORIGINS` | your website, e.g. `https://klicklist-app.pages.dev` |
+   | `ALLOWED_USERS` | your email address |
+   | optional | `TRADEME_CONSUMER_KEY`, `TRADEME_CONSUMER_SECRET`, `TRADEME_SANDBOX`, `AI_DAILY_LIMIT`, `AI_MODEL`, `GEMINI_MODEL`, `PRICE_SOURCES` |
+3. Go to the **Actions** tab → **Deploy Supabase functions** → **Run workflow**. Run it again whenever you change a key.
+
+GitHub keeps these secrets encrypted and they never appear in logs. If you prefer the command line instead, use `supabase secrets set …` and `supabase functions deploy analyze-item ai-batch price-check --no-verify-jwt`.
 
 In the app, **Settings → Which AI** chooses Claude or Gemini, whether the other one is used as a backup, and economy mode.
 
