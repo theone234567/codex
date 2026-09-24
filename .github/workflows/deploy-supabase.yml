@@ -22,6 +22,8 @@ concurrency:
 
 jobs:
   deploy:
+    # Guardrail: only from the main branch of this repo.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -36,9 +38,27 @@ jobs:
           [ -n "$PROJECT_REF" ] || { echo "::error::Add the SUPABASE_PROJECT_REF secret"; missing=1; }
           exit $missing
 
+      - name: "Guardrail: only KlickList's own Supabase project"
+        run: |
+          expected=$(jq -r .supabaseProjectRef klicklist.config.json)
+          if [ "$PROJECT_REF" != "$expected" ]; then
+            echo "::error::SUPABASE_PROJECT_REF is not KlickList's project ($expected). Refusing to deploy anything."
+            exit 1
+          fi
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
+
+      - name: "Guardrail: confirm the project name before changing anything"
+        run: |
+          want=$(jq -r .supabaseProjectName klicklist.config.json)
+          name=$(supabase projects list -o json | jq -r --arg r "$PROJECT_REF" '.[] | select(.id == $r or .ref == $r) | .name' | head -1)
+          echo "Project $PROJECT_REF is named: '${name}'"
+          if [ "$(echo "$name" | tr '[:upper:]' '[:lower:]')" != "$(echo "$want" | tr '[:upper:]' '[:lower:]')" ]; then
+            echo "::error::Project $PROJECT_REF is '${name}', expected '${want}'. Refusing to deploy anything."
+            exit 1
+          fi
 
       - name: Save API keys as Supabase function secrets
         env:
