@@ -51,3 +51,17 @@ describe("gemini", () => {
     expect(() => P.geminiResponseToResult({ candidates: [{ content: { parts: [{ text: "nope" }] }, finishReason: "STOP" }] })).toThrow(/not usable/);
   });
 });
+
+describe("gemini errors", () => {
+  const body = (m: string) => JSON.stringify({ error: { code: 400, message: m, status: "INVALID_ARGUMENT" } });
+  it("says why, without leaking keys", () => {
+    const e = P.geminiHttpError(400, body("API key not valid. Please pass a valid API key. AIzaSyABCDEFGHIJKLMNOP"));
+    expect(e.kind).toBe("unavailable");
+    expect(e.message).toBe("Gemini key is not working (Google says: API key not valid. Please pass a valid API key. [key])");
+    expect(P.geminiHttpError(403, body("Generative Language API has not been used in project 123")).message).toMatch(/has not been used/);
+    expect(P.geminiHttpError(404, body("models/x is not found")).message).toMatch(/model not available/);
+    expect(P.geminiHttpError(429, "").message).toBe("Gemini free limit reached for now");
+    expect(P.geminiHttpError(400, body("Invalid image")).kind).toBe("bad_input");
+    expect(P.googleReason("AQ.Ab8RN6JrtlUVPli1hp70K_gojgqn in text")).toBe("");
+  });
+});

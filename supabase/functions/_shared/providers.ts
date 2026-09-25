@@ -208,13 +208,38 @@ async function writeWithGemini(images: string[], userText: string): Promise<List
     throw new ProviderError("busy", "Gemini is not reachable");
   }
   if (!res.ok) {
-    console.error("gemini error", res.status, (await res.text()).slice(0, 300));
-    if (res.status === 429) throw new ProviderError("busy", "Gemini free limit reached for now");
-    if (res.status === 401 || res.status === 403) throw new ProviderError("unavailable", "Gemini key is not working");
-    if (res.status === 400) throw new ProviderError("bad_input", "AI could not read these photos");
-    throw new ProviderError("busy", "Gemini service error");
+    const body = await res.text();
+    console.error("gemini error", res.status, body.slice(0, 300));
+    throw geminiHttpError(res.status, body);
   }
   return geminiResponseToResult(await res.json());
+}
+
+/** Google's own explanation, with anything that looks like a key removed. */
+export function googleReason(body: string): string {
+  let msg = "";
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: unknown } };
+    if (typeof parsed.error?.message === "string") msg = parsed.error.message;
+  } catch { /* not JSON */ }
+  return msg
+    .replace(/\b(AIza[\w-]{10,}|AQ\.[\w.-]{10,})/g, "[key]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 160);
+}
+
+/** Map a failed Gemini HTTP response to a ProviderError that says why. */
+export function geminiHttpError(status: number, body: string): ProviderError {
+  const reason = googleReason(body);
+  const why = reason ? ` (Google says: ${reason})` : "";
+  if (status === 429) return new ProviderError("busy", `Gemini free limit reached for now${why}`);
+  if (status === 401 || status === 403 || /api key|permission|not enabled|billing|project/i.test(reason)) {
+    return new ProviderError("unavailable", `Gemini key is not working${why}`);
+  }
+  if (status === 404) return new ProviderError("unavailable", `Gemini model not available${why}`);
+  if (status === 400) return new ProviderError("bad_input", `AI could not read these photos${why}`);
+  return new ProviderError("busy", `Gemini service error${why}`);
 }
 
 /** Try each AI in order until one produces a usable answer. */
