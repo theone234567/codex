@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase";
 import { isEmail, normalizePhone } from "../lib/phone";
+import { explainAuthError } from "../lib/authErrors";
 
 // Email codes are free. Text-message codes cost money per SMS, so they're off unless VITE_ENABLE_PHONE=true.
 const PHONE_ENABLED = import.meta.env.VITE_ENABLE_PHONE === "true";
@@ -36,10 +37,8 @@ export default function Login() {
         setStep({ kind: "code", phone });
       }
     } catch (err) {
-      // Same message whether or not the account exists, so the form can't be used to discover accounts.
       console.warn(err);
-      setError(err instanceof Error && err.message.startsWith("Enter") ? err.message
-        : "Couldn't send a code. Check the address/number, or wait a minute and try again.");
+      setError(err instanceof Error && err.message.startsWith("Enter") ? err.message : explainAuthError(err));
     } finally {
       setBusy(false);
     }
