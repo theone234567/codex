@@ -1,6 +1,7 @@
 # Security headers (read automatically by Cloudflare Pages and Netlify).
+# Guardrail: the browser may only contact KlickList's own Supabase project (see klicklist.config.json).
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://*.supabase.co; media-src 'self' blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://mbqnmdhuanjldmhkbcld.supabase.co; media-src 'self' blob:; connect-src 'self' https://mbqnmdhuanjldmhkbcld.supabase.co wss://mbqnmdhuanjldmhkbcld.supabase.co; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer

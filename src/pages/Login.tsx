@@ -60,7 +60,7 @@ export default function Login() {
 
   return (
     <main className="page narrow login">
-      <h1 className="logo">klick<span>List</span></h1>
+      <h1 className="logo">Klick<span>List</span></h1>
       <p className="muted">Snap it. AI writes it. List it.</p>
 
       {step.kind === "enter" ? (

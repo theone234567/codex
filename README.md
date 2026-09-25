@@ -1,4 +1,4 @@
-# klickList
+# KlickList
 
 Photograph a pile of things you want to sell, and AI writes the Trade Me listings for you. Works on **phone and desktop** with the same account: shoot on your phone, then review and upload on your computer.
 

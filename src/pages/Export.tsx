@@ -106,7 +106,7 @@ export default function ExportPage({ batchId, userId }: { batchId: string; userI
             <b>Trade Me category codes</b>
             <p className="muted small">
               Trade Me needs its own category code. Copy it from the category on Trade Me, or leave it blank to use your
-              template's default{templateCategory ? ` (${templateCategory})` : ""}. klickList remembers each code for similar items.
+              template's default{templateCategory ? ` (${templateCategory})` : ""}. KlickList remembers each code for similar items.
             </p>
             {missingCategory.map((i) => (
               <div key={i.id} className="row wrap">

@@ -1,0 +1,6 @@
+{
+  "_comment": "Guardrail: KlickList may only ever use these. Builds and deploys refuse anything else, so it can't touch another project (e.g. megadeal).",
+  "supabaseProjectRef": "mbqnmdhuanjldmhkbcld",
+  "supabaseProjectName": "klickList",
+  "cloudflarePagesProject": "klicklist-app"
+}

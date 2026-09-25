@@ -1,6 +1,6 @@
 {
-  "name": "klickList",
-  "short_name": "klickList",
+  "name": "KlickList",
+  "short_name": "KlickList",
   "description": "Snap a batch of items, let AI write the Trade Me listings, list fast.",
   "start_url": "/",
   "display": "standalone",

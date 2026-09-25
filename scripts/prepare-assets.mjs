@@ -9,6 +9,13 @@ const PART_SIZE = 20 * 1024 * 1024; // some static hosts cap files at 25 MB
 const outDir = "public/models";
 const manifestPath = `${outDir}/silueta.json`;
 
+// Guardrail: refuse to build a site that talks to any Supabase project other than KlickList's own.
+const guard = JSON.parse(readFileSync("klicklist.config.json", "utf8"));
+const url = process.env.VITE_SUPABASE_URL;
+if (url && process.env.CI && new URL(url).hostname !== `${guard.supabaseProjectRef}.supabase.co`) {
+  throw new Error(`VITE_SUPABASE_URL points at ${new URL(url).hostname}, not KlickList's project ${guard.supabaseProjectRef}. Refusing to build.`);
+}
+
 mkdirSync(outDir, { recursive: true });
 mkdirSync("public/ort", { recursive: true });
 copyFileSync("node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm", "public/ort/ort-wasm-simd-threaded.wasm");

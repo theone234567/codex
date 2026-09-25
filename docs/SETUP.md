@@ -89,3 +89,19 @@ Open the site → **Share → Add to Home Screen** (iPhone) or **⋮ → Install
 3. **Review & approve**: check each draft, fix anything flagged, then **Approve & next** (Ctrl/Cmd+Enter on desktop).
 4. **Upload to Trade Me**: create the file, then on Trade Me go to **My Products → Import photos & products → Import CSV file**.
 5. When items sell, delete old batches to free up storage.
+
+## Keeping KlickList separate from your other sites
+
+**Built-in guardrails** (all pinned in `klicklist.config.json`):
+- **Website build:** the Cloudflare build refuses to run if `VITE_SUPABASE_URL` points at any Supabase project other than KlickList's.
+- **Browser:** the security policy (`public/_headers`) only lets the site talk to KlickList's own Supabase project, not any other `*.supabase.co`.
+- **Deploy button:** it only runs from `main`. Before changing anything it checks that the project ID matches, and that the project on Supabase is actually named **klickList**. Otherwise it stops.
+
+**Settings to keep separate** (one-time checks):
+- **GitHub:** keep secrets at the **repository** level (klickList → Settings → Secrets), never at account or organisation level. When a tool asks for GitHub access (Cloudflare, Supabase), choose **Only select repositories**.
+- **Cloudflare:** KlickList is its own Pages project (`klicklist-app`). Don't add a custom domain from another site's zone. If you want a domain later, use a separate one.
+- **Supabase:** KlickList has its own organisation and project. The access token used by the deploy button can reach every project on your Supabase account, so:
+  - give it an **expiry**, such as 30 days, and create a new one when needed;
+  - never paste it anywhere except the klickList repo's secrets;
+  - delete it at supabase.com/dashboard/account/tokens if it's ever exposed.
+- **API keys:** use separate AI keys (Gemini, Anthropic) for KlickList rather than sharing keys with other sites. That way a limit or leak in one doesn't affect the other.

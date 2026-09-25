@@ -87,7 +87,7 @@ export default function SettingsPage() {
           <b>Trade Me import template</b>
           <p className="muted small">
             One-time setup, best done on a computer: on Trade Me go to <b>My Products</b>, create one product by hand with your usual
-            duration, pickup, shipping and payment options, then export your products to CSV and load that file here. klickList
+            duration, pickup, shipping and payment options, then export your products to CSV and load that file here. KlickList
             copies its exact columns and uses that product's options as defaults for every item you export.
           </p>
           <label className="button">
@@ -99,7 +99,7 @@ export default function SettingsPage() {
               <summary className="small">{t.headers.length} columns loaded {new Date(t.loadedAt).toLocaleDateString("en-NZ")}</summary>
               <ul className="small">
                 {t.headers.map((h, i) => (
-                  <li key={i}><code>{h}</code> → {fieldFor(h) ? <b>filled by klickList ({fieldFor(h)})</b> : t.defaults[i] ? <>default “{t.defaults[i].slice(0, 40)}”</> : <span className="muted">blank</span>}</li>
+                  <li key={i}><code>{h}</code> → {fieldFor(h) ? <b>filled by KlickList ({fieldFor(h)})</b> : t.defaults[i] ? <>default “{t.defaults[i].slice(0, 40)}”</> : <span className="muted">blank</span>}</li>
                 ))}
               </ul>
             </details>
