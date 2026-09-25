@@ -53,7 +53,9 @@ jobs:
       - name: "Guardrail: confirm the project name before changing anything"
         run: |
           want=$(jq -r .supabaseProjectName klicklist.config.json)
-          name=$(supabase projects list -o json | jq -r --arg r "$PROJECT_REF" '.[] | select(.id == $r or .ref == $r) | .name' | head -1)
+          # Read only this one project (works with a token limited to the klickList project).
+          name=$(curl -fsS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF" | jq -r '.name // empty') || name=""
           echo "Project $PROJECT_REF is named: '${name}'"
           if [ "$(echo "$name" | tr '[:upper:]' '[:lower:]')" != "$(echo "$want" | tr '[:upper:]' '[:lower:]')" ]; then
             echo "::error::Project $PROJECT_REF is '${name}', expected '${want}'. Refusing to deploy anything."
